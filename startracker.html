@@ -93,22 +93,44 @@
     box-shadow: 0 2px 16px rgba(0,0,0,0.06);
   }
 
-  .delete-btn {
+  .card-top-btns {
     position: absolute;
-    top: 12px;
-    right: 12px;
+    top: 11px;
+    right: 11px;
+    display: flex;
+    gap: 4px;
+  }
+  .icon-btn {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 2px;
+    padding: 3px;
     color: var(--text-3);
     transition: color 0.15s;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 6px;
   }
-  .delete-btn:hover { color: #888; }
-  .delete-btn svg { width: 14px; height: 14px; stroke: currentColor; }
+  .icon-btn:hover { color: #555; background: #f0f0f0; }
+  .icon-btn svg { width: 13px; height: 13px; stroke: currentColor; }
+
+  .name-edit-wrap { width: 100%; display: flex; align-items: center; gap: 6px; }
+  .name-input-inline {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+    border: none;
+    border-bottom: 1.5px solid var(--border-strong);
+    border-radius: 0;
+    background: transparent;
+    color: var(--text);
+    font-family: inherit;
+    outline: none;
+    padding: 2px 4px;
+  }
+  .name-input-inline:focus { border-bottom-color: #888; }
 
   .avatar {
     width: 52px;
@@ -362,6 +384,8 @@ function renderStars(count) {
 
 const closeSVG = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
 const plusSVG = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+const editSVG = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+const checkSVG = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
 
 function render() {
   const sorted = [...members].sort((a, b) => b.stars - a.stars);
@@ -372,9 +396,12 @@ function render() {
   }
   grid.innerHTML = sorted.map(m => `
     <div class="card">
-      <button class="delete-btn" onclick="deleteMember(${m.id})" title="삭제">${closeSVG}</button>
+      <div class="card-top-btns">
+        <button class="icon-btn" onclick="startEdit(${m.id})" title="이름 수정">${editSVG}</button>
+        <button class="icon-btn" onclick="deleteMember(${m.id})" title="삭제">${closeSVG}</button>
+      </div>
       <div class="avatar">${getInitials(m.name)}</div>
-      <div class="member-name">${m.name}</div>
+      <div class="member-name" id="name-display-${m.id}">${m.name}</div>
       <div class="star-box">
         <div class="star-num">${m.stars}</div>
         <div class="star-label">적립된 별</div>
@@ -385,6 +412,38 @@ function render() {
         <button class="btn-plus" onclick="change(${m.id},1)">${plusSVG} 별 추가</button>
       </div>
     </div>`).join('');
+}
+
+function startEdit(id) {
+  const m = members.find(x => x.id === id);
+  if (!m) return;
+  const nameEl = document.getElementById(`name-display-${id}`);
+  if (!nameEl) return;
+  nameEl.outerHTML = `
+    <div class="name-edit-wrap" id="name-display-${id}">
+      <input class="name-input-inline" id="name-edit-input-${id}" value="${m.name}"
+        onkeydown="if(event.key==='Enter') confirmEdit(${id}); if(event.key==='Escape') render();"
+      />
+      <button class="icon-btn" onclick="confirmEdit(${id})" title="저장">${checkSVG}</button>
+    </div>`;
+  setTimeout(() => {
+    const inp = document.getElementById(`name-edit-input-${id}`);
+    if (inp) { inp.focus(); inp.select(); }
+  }, 30);
+}
+
+function confirmEdit(id) {
+  const inp = document.getElementById(`name-edit-input-${id}`);
+  if (!inp) return;
+  const val = inp.value.trim();
+  if (!val) return;
+  const m = members.find(x => x.id === id);
+  if (!m) return;
+  const oldName = m.name;
+  m.name = val;
+  if (oldName !== val) addLog(`✏️ ${oldName} → ${val}`);
+  save();
+  render();
 }
 
 function change(id, delta) {
