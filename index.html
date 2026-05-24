@@ -356,7 +356,8 @@
 </div>
 
 <script>
-let members = JSON.parse(localStorage.getItem('star-members') || 'null') || [
+const _saved = localStorage.getItem('star-members');
+let members = _saved ? JSON.parse(_saved) : [
   { id: 1, name: '김민준', stars: 5 },
   { id: 2, name: '이서연', stars: 3 },
   { id: 3, name: '박지훈', stars: 7 },
@@ -395,7 +396,7 @@ function render() {
     return;
   }
   grid.innerHTML = sorted.map(m => `
-    <div class="card">
+    <div class="card" id="card-${m.id}">
       <div class="card-top-btns">
         <button class="icon-btn" onclick="startEdit(${m.id})" title="이름 수정">${editSVG}</button>
         <button class="icon-btn" onclick="deleteMember(${m.id})" title="삭제">${closeSVG}</button>
@@ -443,7 +444,12 @@ function confirmEdit(id) {
   m.name = val;
   if (oldName !== val) addLog(`✏️ ${oldName} → ${val}`);
   save();
-  render();
+  // 전체 재렌더링 대신 해당 카드만 업데이트
+  const card = document.getElementById(`card-${id}`);
+  if (!card) { render(); return; }
+  card.querySelector('.avatar').textContent = getInitials(val);
+  const nameWrap = document.getElementById(`name-display-${id}`);
+  if (nameWrap) nameWrap.outerHTML = `<div class="member-name" id="name-display-${id}">${val}</div>`;
 }
 
 function change(id, delta) {
@@ -455,8 +461,17 @@ function change(id, delta) {
     const msg = delta > 0 ? `⭐ ${m.name} +1개 → 총 ${m.stars}개` : `${m.name} −1개 → 총 ${m.stars}개`;
     addLog(msg);
     save();
-    render();
+    updateCardStars(id);
   }
+}
+
+function updateCardStars(id) {
+  const m = members.find(x => x.id === id);
+  if (!m) return;
+  const card = document.getElementById(`card-${id}`);
+  if (!card) { render(); return; }
+  card.querySelector('.star-num').textContent = m.stars;
+  card.querySelector('.stars-row').innerHTML = renderStars(m.stars);
 }
 
 function deleteMember(id) {
